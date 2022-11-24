@@ -23,6 +23,7 @@ const db = async () =>{
         const productsCollection = client.db('BlackMarket').collection('products');
         const categoriesCollection = client.db('BlackMarket').collection('categories')
         const advertiseCollection = client.db('BlackMarket').collection('advertiseProducts');
+        const userCollection = client.db('BlackMarket').collection('users');
 
         app.get('/products', async(req, res)=>{
             const products = await productsCollection.find({}).toArray();
@@ -45,6 +46,13 @@ const db = async () =>{
         app.get('/advertiseProducts', async(req, res)=>{
             const products = await advertiseCollection.find({}).toArray();
             res.send(products)
+        })
+
+        //users post
+        app.post('/users', async(req, res)=>{
+            const user = req.body;
+            const result = await userCollection.insertOne(user);
+            res.send(result)
         })
 
     } catch (e) {
