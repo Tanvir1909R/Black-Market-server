@@ -117,6 +117,12 @@ const db = async () =>{
                 res.send({message:'no user'})
             }
         })
+        app.get('/buyers', async(req, res)=>{
+            const filter = { type:'Buyer' }
+            const users = await userCollection.find(filter).toArray();
+            res.send(users)
+        })
+        
 
         //booking products
         app.post('/bookingProducts', async(req, res)=>{
