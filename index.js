@@ -48,11 +48,37 @@ const db = async () =>{
             res.send(products)
         })
 
-        //users post
+        //users
         app.post('/users', async(req, res)=>{
             const user = req.body;
-            const result = await userCollection.insertOne(user);
-            res.send(result)
+            const previousUser = await userCollection.findOne({email:user.email})
+            if(!previousUser){
+                const result = await userCollection.insertOne(user);
+                res.send(result)
+            }else{
+                res.send({message:'previous user'})
+            }
+        })
+        app.get('/users', async(req, res)=>{
+            const userEmail = req.query.email;
+            const filter = { email:userEmail };
+            const user = await userCollection.findOne(filter);
+            if(user.type === 'Buyer'){
+                res.send({
+                    isBuyer: user.type === 'Buyer',
+                    userType:user.type
+                }) 
+            }else if(user.type === 'Seller'){
+                res.send({
+                    isSeller: user.type === 'Seller',
+                    userType:user.type
+                }) 
+            }else{
+                res.send({
+                    isAdmin:true,
+                    userType:user.type
+                })
+            }
         })
 
     } catch (e) {
