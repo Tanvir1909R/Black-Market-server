@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion, Db } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, } = require('mongodb');
 const port = process.env.PORT || 5000
 
 
@@ -24,10 +24,29 @@ const db = async () =>{
         const categoriesCollection = client.db('BlackMarket').collection('categories')
         const advertiseCollection = client.db('BlackMarket').collection('advertiseProducts');
         const userCollection = client.db('BlackMarket').collection('users');
+        const bookingProductsCollection = client.db('BlackMarket').collection('bookingProducts')
 
+        //products 
         app.get('/products', async(req, res)=>{
             const products = await productsCollection.find({}).toArray();
             res.send(products)
+        })
+        app.get('/products', async(req, res)=>{
+            const email = req.query.email;
+            const filter = {email:email};
+            const products = await productsCollection.find(filter).toArray() 
+            res.send(products)
+        })
+        app.post('/products', async(req, res)=>{
+            const product = req.body;
+            const result = await productsCollection.insertOne(product)
+            res.send(result)
+        })
+        app.delete('/products/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)}
+            const result = await productsCollection.deleteOne(filter)
+            res.send(result)
         })
         // categories
         app.get('/categories', async(req, res)=>{
@@ -47,6 +66,20 @@ const db = async () =>{
             const products = await advertiseCollection.find({}).toArray();
             res.send(products)
         })
+        app.post('/advertiseProducts', async(req, res)=>{
+            const product = req.body;
+            const currentProductID = product.productID
+            const previousProducts = await advertiseCollection.find({}).toArray() 
+
+            const previousProduct = previousProducts.filter(pro => pro.productID === currentProductID)
+            console.log(previousProduct, currentProductID);
+            if(!previousProduct.length){
+                const result = await advertiseCollection.insertOne(product)
+                res.send(result)
+            }else{
+                res.send({message:'already in advertise section'})
+            }
+        })
 
         //users
         app.post('/users', async(req, res)=>{
@@ -63,22 +96,39 @@ const db = async () =>{
             const userEmail = req.query.email;
             const filter = { email:userEmail };
             const user = await userCollection.findOne(filter);
-            if(user.type === 'Buyer'){
-                res.send({
-                    isBuyer: user.type === 'Buyer',
-                    userType:user.type
-                }) 
-            }else if(user.type === 'Seller'){
-                res.send({
-                    isSeller: user.type === 'Seller',
-                    userType:user.type
-                }) 
+            if(userEmail){
+                if(user?.type === 'Buyer'){
+                    res.send({
+                        isBuyer: user?.type === 'Buyer',
+                        userType:user?.type
+                    }) 
+                }else if(user?.type === 'Seller'){
+                    res.send({
+                        isSeller: user?.type === 'Seller',
+                        userType:user?.type
+                    }) 
+                }else{
+                    res.send({
+                        isAdmin:true,
+                        userType:user?.type
+                    })
+                }
             }else{
-                res.send({
-                    isAdmin:true,
-                    userType:user.type
-                })
+                res.send({message:'no user'})
             }
+        })
+
+        //booking products
+        app.post('/bookingProducts', async(req, res)=>{
+            const product = req.body;
+            const result = await bookingProductsCollection.insertOne(product);
+            res.send(result)
+        })
+        app.get('/bookingProducts/:email', async(req, res)=>{
+            const email = req.params.email;
+            const filter = {email: email}
+            const products = await bookingProductsCollection.find(filter).toArray()
+            res.send(products)
         })
 
     } catch (e) {
