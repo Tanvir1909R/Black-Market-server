@@ -122,7 +122,11 @@ const db = async () =>{
             const users = await userCollection.find(filter).toArray();
             res.send(users)
         })
-        
+        app.get('/seller', async(req, res)=>{
+            const filter = { type:'Seller' }
+            const users = await userCollection.find(filter).toArray();
+            res.send(users)
+        })
 
         //booking products
         app.post('/bookingProducts', async(req, res)=>{
