@@ -45,8 +45,14 @@ const db = async () =>{
         app.delete('/products/:id', async(req, res)=>{
             const id = req.params.id;
             const filter = {_id:ObjectId(id)}
+            const advertiseProductFilter = {productID:id};
+            const advertiseResult = await advertiseCollection.deleteOne(advertiseProductFilter) 
             const result = await productsCollection.deleteOne(filter)
-            res.send(result)
+            res.send({
+                acknowledged:true,
+                 result,
+                 advertiseResult
+            })
         })
         // categories
         app.get('/categories', async(req, res)=>{
@@ -96,25 +102,28 @@ const db = async () =>{
             const userEmail = req.query.email;
             const filter = { email:userEmail };
             const user = await userCollection.findOne(filter);
-            if(userEmail){
+            if(user){
                 if(user?.type === 'Buyer'){
                     res.send({
+                        acknowledged:true,
                         isBuyer: user?.type === 'Buyer',
                         userType:user?.type
                     }) 
                 }else if(user?.type === 'Seller'){
                     res.send({
+                        acknowledged:true,
                         isSeller: user?.type === 'Seller',
                         userType:user?.type
                     }) 
                 }else{
                     res.send({
+                        acknowledged:true,
                         isAdmin:true,
                         userType:user?.type
                     })
                 }
             }else{
-                res.send({message:'no user'})
+                res.send({message:'Forbidden user. your account has been deleted by admin.You are crossing our policy limits',acknowledged:false})
             }
         })
         app.get('/buyers', async(req, res)=>{
@@ -131,8 +140,17 @@ const db = async () =>{
         //booking products
         app.post('/bookingProducts', async(req, res)=>{
             const product = req.body;
-            const result = await bookingProductsCollection.insertOne(product);
-            res.send(result)
+            const currentProductID = product.productID
+            const previousProducts = await bookingProductsCollection.find({}).toArray()
+
+            const previousProduct = previousProducts.filter(pro => pro.productID === currentProductID)
+            if(!previousProduct.length){
+                const result = await bookingProductsCollection.insertOne(product);
+                res.send(result)
+            }else{
+                res.send({message:'already added'})
+            }
+
         })
         app.get('/bookingProducts/:email', async(req, res)=>{
             const email = req.params.email;
