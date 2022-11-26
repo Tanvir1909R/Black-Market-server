@@ -131,6 +131,12 @@ const db = async () =>{
             const users = await userCollection.find(filter).toArray();
             res.send(users)
         })
+        app.delete('/buyers/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)}
+            const result = await userCollection.deleteOne(filter);
+            res.send(result)
+        })
         app.get('/seller', async(req, res)=>{
             const filter = { type:'Seller' }
             const users = await userCollection.find(filter).toArray();
@@ -155,7 +161,7 @@ const db = async () =>{
         app.get('/bookingProducts/:email', async(req, res)=>{
             const email = req.params.email;
             const filter = {email: email}
-            const products = await bookingProductsCollection.find(filter).toArray()
+            const products = await bookingProductsCollection.find(filter).toArray()   
             res.send(products)
         })
 
