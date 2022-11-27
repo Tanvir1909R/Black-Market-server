@@ -25,13 +25,15 @@ const db = async () =>{
         const advertiseCollection = client.db('BlackMarket').collection('advertiseProducts');
         const userCollection = client.db('BlackMarket').collection('users');
         const bookingProductsCollection = client.db('BlackMarket').collection('bookingProducts')
+        const reportedProductsCollection = client.db('BlackMarket').collection('reportedProducts')
+
 
         //products 
         app.get('/products', async(req, res)=>{
             const products = await productsCollection.find({}).toArray();
             res.send(products)
         })
-        app.get('/products', async(req, res)=>{
+        app.get('/sellerProducts', async(req, res)=>{
             const email = req.query.email;
             const filter = {email:email};
             const products = await productsCollection.find(filter).toArray() 
@@ -54,6 +56,25 @@ const db = async () =>{
                  advertiseResult
             })
         })
+        //reported Products
+        app.post('/reportedProducts', async(req, res)=>{
+            const product = req.body;
+            const result = await reportedProductsCollection.insertOne(product);
+            res.send(result);
+        })
+        app.get('/reportedProducts', async(req, res)=>{
+            const reportProducts = await reportedProductsCollection.find({}).toArray()
+            res.send(reportProducts)
+        })
+        app.delete('/reportedProducts/:id', async(req, res)=>{
+            const id = req.params.id;
+            const productFilter = { _id:ObjectId(id) }
+            const productDeleteResult = await productsCollection.deleteOne(productFilter);
+            const deleteFilter = { productID:id }
+            const result = await reportedProductsCollection.deleteMany(deleteFilter);
+            res.send({delete:true,result1:result,result2:productDeleteResult})
+        })
+
         // categories
         app.get('/categories', async(req, res)=>{
             const categories = await categoriesCollection.find({}).toArray();
@@ -141,6 +162,12 @@ const db = async () =>{
             const filter = { type:'Seller' }
             const users = await userCollection.find(filter).toArray();
             res.send(users)
+        })
+        app.delete('/seller/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)}
+            const result = await userCollection.deleteOne(filter);
+            res.send(result)
         })
 
         //booking products
