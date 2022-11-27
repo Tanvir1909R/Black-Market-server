@@ -235,6 +235,30 @@ const db = async () =>{
                 res.status(401).send({message:'Unauthorized access'})
             }
         })
+        //verifyAccount 
+        app.put('/verifyAccount', async(req, res)=>{
+            const email = req.query.email;
+            const filter = {email:email}
+            const updateDoc = {
+                $set:{
+                    userVerified:true
+                }
+            }
+            const option = {upsert:true};
+            const updateUser = await userCollection.updateOne(filter,updateDoc,option)
+            const updateProductState = await productsCollection.updateMany(filter,updateDoc, option)
+            res.send({update:true, result1:updateUser, result2:updateProductState})
+        })
+        app.get('/isVerify', async(req ,res)=>{
+            const email = req.query.email;
+            const filter = {email:email};
+            const user = await userCollection.findOne(filter)
+            if(user.userVerified){
+                res.send({isVerify:true})
+            }else{
+                res.send({isVerify:false})
+            }
+        })
 
     } catch (e) {
         console.log(e.message);
