@@ -42,6 +42,7 @@ const db = async () =>{
         const userCollection = client.db('BlackMarket').collection('users');
         const bookingProductsCollection = client.db('BlackMarket').collection('bookingProducts')
         const reportedProductsCollection = client.db('BlackMarket').collection('reportedProducts')
+        const paymentInfoCollection = client.db('BlackMarket').collection('paymentInfo');
 
 
         //products 
@@ -121,7 +122,6 @@ const db = async () =>{
             const previousProducts = await advertiseCollection.find({}).toArray() 
 
             const previousProduct = previousProducts.filter(pro => pro.productID === currentProductID)
-            console.log(previousProduct, currentProductID);
             if(!previousProduct.length){
                 const result = await advertiseCollection.insertOne(product)
                 res.send(result)
@@ -286,6 +286,35 @@ const db = async () =>{
             res.send({
                 clientSecret: paymentIntent.client_secret,
               });
+        })
+        app.post('/confirmPayment', async(req, res)=>{
+            const paymentInfo = req.body;
+            const result = paymentInfoCollection.insertOne(paymentInfo)
+            res.send(result)
+        })
+        app.put('/updateBooking/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {productID:id}
+            const updateDoc = {
+                $set:{
+                    isPaid:true
+                }
+            }
+            const option = {upsert:true}
+            const result = await bookingProductsCollection.updateOne(filter, updateDoc, option)
+            res.send(result)
+        })
+        app.delete('/deleteProduct/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)};
+            const result = await productsCollection.deleteOne(filter)
+            res.send(result);
+        })
+        app.delete('/deleteAdvertiseProduct/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {productID:id}
+            const result = await advertiseCollection.deleteOne(filter)
+            res.send(result);
         })
 
     } catch (e) {
