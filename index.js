@@ -43,6 +43,7 @@ const db = async () =>{
         const bookingProductsCollection = client.db('BlackMarket').collection('bookingProducts')
         const reportedProductsCollection = client.db('BlackMarket').collection('reportedProducts')
         const paymentInfoCollection = client.db('BlackMarket').collection('paymentInfo');
+        const paymentMethodCollection = client.db('BlackMarket').collection('paymentMethod');
 
 
         //products 
@@ -59,6 +60,16 @@ const db = async () =>{
         app.post('/products', async(req, res)=>{
             const product = req.body;
             const result = await productsCollection.insertOne(product)
+            res.send(result)
+        })
+        app.patch('/products/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)}
+            const updatedProduct = req.body;
+            const updateDoc = {
+                $set: updatedProduct
+            }
+            const result = await productsCollection.updateOne(filter, updateDoc)
             res.send(result)
         })
         app.delete('/products/:id', async(req, res)=>{
@@ -87,9 +98,11 @@ const db = async () =>{
             const id = req.params.id;
             const productFilter = { _id:ObjectId(id) }
             const productDeleteResult = await productsCollection.deleteOne(productFilter);
+            const advertiseFilter = { productID:id }
+            const advertiseDeleteResult = await advertiseCollection.deleteMany(advertiseFilter);
             const deleteFilter = { productID:id }
-            const result = await reportedProductsCollection.deleteMany(deleteFilter);
-            res.send({delete:true,result1:result,result2:productDeleteResult})
+            const reportDeleteResult = await reportedProductsCollection.deleteMany(deleteFilter);
+            res.send({delete:true,product:productDeleteResult,advertise:advertiseDeleteResult,report:reportDeleteResult})
         })
 
         // categories
@@ -267,6 +280,23 @@ const db = async () =>{
             }
         })
         //payment
+        app.post('/paymentMethod', async(req, res)=>{
+            const paymentMethod = req.body;
+            const result = await paymentMethodCollection.insertOne(paymentMethod);
+            res.send(result);
+        })
+        app.get('/paymentMethods', async(req, res)=>{
+            const email = req.query.email;
+            const filter = {email:email};
+            const paymentMethods = await paymentMethodCollection.find(filter).toArray();
+            res.send(paymentMethods);
+        })
+        app.delete('/paymentMethod/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)};
+            const result = await paymentMethodCollection.deleteOne(filter);
+            res.send(result);
+        })
         app.get('/paymentItem/:id', async(req,res)=>{
             const id = req.params.id;
             const filter = {_id:ObjectId(id)};
@@ -291,6 +321,67 @@ const db = async () =>{
             const paymentInfo = req.body;
             const result = paymentInfoCollection.insertOne(paymentInfo)
             res.send(result)
+        })
+        app.get('/pendingPayments', async(req, res)=>{
+            const email = req.query.email;
+            const filter = {sellerEmail:email, status:'pending'};
+            const pendingPayments = await paymentInfoCollection.find(filter).toArray();
+            res.send(pendingPayments);
+        })
+        app.put('/approvePayment/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)};
+            const updateDoc = {
+                $set:{
+                    status:'approved'
+                }
+            }
+            const result = await paymentInfoCollection.updateOne(filter, updateDoc);
+            
+            // Get payment info to find productId
+            const paymentInfo = await paymentInfoCollection.findOne(filter);
+            if(paymentInfo && paymentInfo.productId){
+                const productId = paymentInfo.productId;
+                // Delete product from products collection
+                const productFilter = { _id:ObjectId(productId) }
+                await productsCollection.deleteOne(productFilter);
+                // Delete from advertise collection
+                const advertiseFilter = { productID:productId }
+                await advertiseCollection.deleteMany(advertiseFilter);
+                // Delete from reported products collection
+                await reportedProductsCollection.deleteMany(advertiseFilter);
+            }
+            
+            res.send(result);
+        })
+        app.put('/rejectPayment/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id:ObjectId(id)};
+            const updateDoc = {
+                $set:{
+                    status:'rejected'
+                }
+            }
+            const result = await paymentInfoCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
+        //admin stats
+        app.get('/adminStats', async(req, res)=>{
+            const totalBuyers = await userCollection.countDocuments({type:'Buyer'});
+            const totalSellers = await userCollection.countDocuments({type:'Seller'});
+            const totalReportedItems = await reportedProductsCollection.countDocuments();
+            const completedDeals = await bookingProductsCollection.countDocuments({isPaid:true});
+            const totalProducts = await productsCollection.countDocuments();
+            const pendingPayments = await paymentInfoCollection.countDocuments({status:'pending'});
+            
+            res.send({
+                totalBuyers,
+                totalSellers,
+                totalReportedItems,
+                completedDeals,
+                totalProducts,
+                pendingPayments
+            });
         })
         app.put('/updateBooking/:id', async(req, res)=>{
             const id = req.params.id;
